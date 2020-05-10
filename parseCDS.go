@@ -58,8 +58,11 @@ type GeoJSON struct {
 func NewCDSParser(source CDSType, country string, level string, input *os.File) CDSParser {
 	return CDSParser{Country: country, Level: level, CDSTypeData: source, DataFile: input}
 }
+func (c *CDSParser) ParseDaily() {
 
-func (c *CDSParser) Parse() (int, int, error) {
+}
+
+func (c *CDSParser) ParseHistory() (int, int, error) {
 	dec := json.NewDecoder(c.DataFile)
 	count := 0
 	rawRecordCount := 0

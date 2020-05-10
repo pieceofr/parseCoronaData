@@ -24,11 +24,30 @@ const (
 
 func main() {
 	//go PrintUsage()
-	cdsFile, err := getDataFilePath(CDS)
+	file, err := getDataFilePath(CDS)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
+	CDSHistoryToDB(file)
+}
+
+func getDataFilePath(source CovidSource) (string, error) {
+	working, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	switch source {
+	case CDS:
+		path := path.Join(working, DataDir, "timeseries-byLocation.json")
+		return path, nil
+	default:
+		return "", errors.New("no data source")
+	}
+	return "", nil
+}
+
+func CDSHistoryToDB(cdsFile string) {
 	f, err := os.Open(cdsFile)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -36,7 +55,7 @@ func main() {
 	}
 
 	parser := NewCDSParser(CDSTimeseriesLocation, "United State", "county", f)
-	cnt, rawRecordCount, err := parser.Parse()
+	cnt, rawRecordCount, err := parser.ParseHistory()
 	if err != nil {
 		log.Println("US Data Parse Error", err)
 		return
@@ -60,7 +79,7 @@ func main() {
 	}
 
 	parser = NewCDSParser(CDSTimeseriesLocation, "Taiwan", "country", f)
-	cnt, rawRecordCount, err = parser.Parse()
+	cnt, rawRecordCount, err = parser.ParseHistory()
 	if err != nil {
 		log.Println("Taiwan  Data Parse Error", err)
 		return
@@ -74,21 +93,6 @@ func main() {
 	}
 	return
 
-}
-
-func getDataFilePath(source CovidSource) (string, error) {
-	working, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	switch source {
-	case CDS:
-		path := path.Join(working, DataDir, "timeseries-byLocation.json")
-		return path, nil
-	default:
-		return "", errors.New("no data source")
-	}
-	return "", nil
 }
 
 func createCDSData(c *MongoClient, result []CDSData, collection string) error {
