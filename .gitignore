@@ -1,0 +1,7 @@
+*.pem
+go.sum
+*.json
+# Binaries
+bin
+parseCoronaData
+
