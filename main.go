@@ -20,7 +20,7 @@ const (
 
 func main() {
 	//go PrintUsage()
-	job := "history"
+	job := "online"
 	client, err := NewMongoConnect()
 	if err != nil {
 		fmt.Println("connect to autonomy db error:", err)
@@ -84,7 +84,6 @@ func CDSHistoryToDB(client *MongoClient, cdsFile string, noEarlier int64) {
 		log.Println("US Data Parse Error", err)
 		return
 	}
-	f.Close()
 	log.Println("US data get:", cnt, " rawRecordCount in file:", rawRecordCount)
 	err = setIndex(client, CollectionConfirmUS)
 	if err != nil {
@@ -96,26 +95,23 @@ func CDSHistoryToDB(client *MongoClient, cdsFile string, noEarlier int64) {
 		fmt.Println("create US CDSData error:", err)
 		return
 	}
-	f, err = os.Open(cdsFile)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+	f.Seek(0, 0)
+
 	err = setIndex(client, CollectionConfirmTaiwan)
 	if err != nil {
 		fmt.Println("set ConfirmTW index error:", err)
 		return
 	}
 
-	parser = NewCDSParser(CDSTimeseriesLocationFile, "Taiwan", "country", f, "")
-	cnt, rawRecordCount, err = parser.ParseHistory(noEarlier)
+	parserTW := NewCDSParser(CDSTimeseriesLocationFile, "Taiwan", "country", f, "")
+	cnt, rawRecordCount, err = parserTW.ParseHistory(noEarlier)
 	if err != nil {
 		log.Println("Taiwan  Data Parse Error", err)
 		return
 	}
 	f.Close()
 	log.Println("Taiwan data get:", cnt, " rawRecordCount in file:", rawRecordCount)
-	err = createCDSData(client, parser.Result, CollectionConfirmTaiwan)
+	err = createCDSData(client, parserTW.Result, CollectionConfirmTaiwan)
 	if err != nil {
 		fmt.Println("create Taiwan CDSData error:", err)
 		return
@@ -173,10 +169,10 @@ func CDSDailyOnline(client *MongoClient, url string) error {
 	parserTW := NewCDSParser(CDSDaily, "Taiwan", "country", nil, url)
 	cnt, err = parserTW.ParseDailyOnline()
 	if err != nil {
-		fmt.Println("parse US daily error:", err)
+		fmt.Println("parse TW daily error:", err)
 	}
-	fmt.Println("parse us daily cnt:", cnt)
-	err = createCDSData(client, parserTW.Result, CollectionConfirmUS)
+	fmt.Println("parse tw daily cnt:", cnt)
+	err = createCDSData(client, parserTW.Result, CollectionConfirmTaiwan)
 	if err != nil {
 		fmt.Println("create Taiwan CDSData error:", err)
 		return err

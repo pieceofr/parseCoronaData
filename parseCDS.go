@@ -78,12 +78,13 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 		if strings.Contains(key, c.Country) {
 			rawRecordCount++
 			dateData := m["dates"].(map[string]interface{})
+			//fmt.Println("number date objects:", len(dateData))
 			for k, v := range dateData {
 				record := CDSData{}
 				ok := false
 				record.Name, ok = m["name"].(string)
 				if !ok || len(record.Name) <= 0 {
-					break
+					continue
 				}
 				record.City, _ = m["city"].(string)
 				record.County, _ = m["county"].(string)
@@ -91,7 +92,7 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 
 				record.Country, ok = m["country"].(string)
 				if !ok || len(record.Country) <= 0 {
-					break
+					continue
 				}
 				record.CountryID, _ = m["countryId"].(string)
 				record.StateID, _ = m["stateId"].(string)
@@ -112,7 +113,7 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 				}
 
 				if record.Level != c.Level {
-					break
+					continue
 				}
 
 				coorRaw, ok := m["coordinates"].([]interface{})
@@ -140,11 +141,11 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 				dateCases, ok := v.(map[string]interface{})
 				if !ok {
 					fmt.Println("cast date data error")
-					break
+					continue
 				}
 				record.Cases, ok = dateCases["cases"].(float64)
 				if !ok {
-					break
+					continue
 				}
 				record.Deaths, _ = dateCases["deaths"].(float64)
 				record.Recovered, _ = dateCases["Recovered"].(float64)
@@ -156,7 +157,7 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 				ts, err := convertLocalDateToUTC(convertZone, k)
 				if err != nil {
 					fmt.Println(record.Name, "  convertLocalDateToUTC error:", err)
-					break
+					continue
 				}
 				record.ReportTime = ts
 				record.UpdateTime = time.Now().UTC().Unix()
@@ -165,7 +166,7 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 					records = append(records, record)
 					count++
 				}
-			}
+			} // end of parsing date objects
 		}
 	}
 	c.Result = records
@@ -276,6 +277,7 @@ func (c *CDSParser) ParseDaily() (int, error) {
 		count++
 		updateRecords = append(updateRecords, record)
 	}
+	c.Result = updateRecords
 	return count, nil
 }
 
@@ -376,6 +378,7 @@ func (c *CDSParser) ParseDailyOnline() (int, error) {
 		count++
 		updateRecords = append(updateRecords, record)
 	}
+	c.Result = updateRecords
 
 	return count, nil
 }

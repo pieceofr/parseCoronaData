@@ -71,8 +71,9 @@ func createCDSData(c *MongoClient, result []CDSData, collection string) error {
 	for i, v := range result {
 		data[i] = v
 	}
+	fmt.Println("createCDSData try to insert ", len(data), " record")
 	opts := options.InsertMany().SetOrdered(false)
-	_, err := c.UsedDB.Collection(collection).InsertMany(context.Background(), data, opts)
+	res, err := c.UsedDB.Collection(collection).InsertMany(context.Background(), data, opts)
 	if err != nil {
 		if errs, hasErr := err.(mongo.BulkWriteException); hasErr {
 			if 1 == len(errs.WriteErrors) && DuplicateKeyCode == errs.WriteErrors[0].Code {
@@ -81,6 +82,11 @@ func createCDSData(c *MongoClient, result []CDSData, collection string) error {
 			}
 		}
 	}
-	//fmt.Println("result of insert mongodb", res)
+	if res != nil {
+		fmt.Println("number record inserted:", len(res.InsertedIDs))
+	} else {
+		fmt.Println("no record inserted in db")
+	}
+
 	return nil
 }
