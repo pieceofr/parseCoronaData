@@ -24,12 +24,29 @@ const (
 
 func main() {
 	//go PrintUsage()
-	file, err := getDataFilePath(CDS)
+	job := "daily"
+	client, err := NewMongoConnect()
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("connect to autonomy db error:", err)
 		return
 	}
-	CDSHistoryToDB(file)
+	switch job {
+	case "history":
+		file, err := getDataFilePath(CDSTimeseriesLocation)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		CDSHistoryToDB(file)
+	case "daily":
+		file, _ := getDataFilePath(CDSDaily)
+		log.Println("filepath=", file)
+		err := CDSDailyUpdate(file)
+		if err != nil {
+			fmt.Println("parse daily err", err)
+		}
+	}
+
 }
 
 func getDataFilePath(source CovidSource) (string, error) {
@@ -37,9 +54,13 @@ func getDataFilePath(source CovidSource) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	switch source {
-	case CDS:
+	case CDSTimeseriesLocation:
 		path := path.Join(working, DataDir, "timeseries-byLocation.json")
+		return path, nil
+	case CDSDaily:
+		path := path.Join(working, DataDir, "dataDaily.json")
 		return path, nil
 	default:
 		return "", errors.New("no data source")
@@ -47,7 +68,7 @@ func getDataFilePath(source CovidSource) (string, error) {
 	return "", nil
 }
 
-func CDSHistoryToDB(cdsFile string) {
+func CDSHistoryToDB(client *MongoClient, cdsFile string) {
 	f, err := os.Open(cdsFile)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -62,11 +83,7 @@ func CDSHistoryToDB(cdsFile string) {
 	}
 	f.Close()
 	log.Println("US data get:", cnt, " rawRecordCount in file:", rawRecordCount)
-	client, err := NewMongoConnect()
-	if err != nil {
-		fmt.Println("connect to autonomy db error:", err)
-		return
-	}
+
 	err = createCDSData(client, parser.Result, CollectionConfirmUS)
 	if err != nil {
 		fmt.Println("create US CDSData error:", err)
@@ -124,5 +141,31 @@ func createCDSData(c *MongoClient, result []CDSData, collection string) error {
 			}
 		}
 	}
+	return nil
+}
+func insertCDSData(c *MongoClient, result []CDSData, collection string) error {
+	return nil
+}
+func CDSDailyUpdate(cdsFile string) error {
+	f, err := os.Open(cdsFile)
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
+	parserUS := NewCDSParser(CDSDaily, "United State", "county", f)
+	cnt, err := parserUS.ParseDaily()
+	if err != nil {
+		fmt.Println("parse US daily error:", err)
+	}
+	fmt.Println("parse us daily cnt:", cnt)
+
+	f.Seek(0, 0)
+	parserTW := NewCDSParser(CDSDaily, "Taiwan", "country", f)
+	cnt, err = parserTW.ParseDaily()
+	f.Close()
+	if err != nil {
+		fmt.Println("parse Taiwan daily error:", err)
+	}
+	fmt.Println("parse Taiwan daily cnt:", cnt)
 	return nil
 }
