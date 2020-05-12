@@ -102,13 +102,21 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 				if ok && "" == record.Level {
 					switch c.Level {
 					case "country":
-						record.Level = "country"
+						if "" != record.Country && "" == record.State {
+							record.Level = "country"
+						}
 					case "state":
-						record.Level = "state"
+						if "" != record.State && "" == record.County {
+							record.Level = "state"
+						}
 					case "county":
-						record.Level = "county"
+						if "" != record.County && "" == record.City {
+							record.Level = "county"
+						}
 					case "city":
 						record.Level = "city"
+					default:
+						continue
 					}
 				}
 
@@ -215,17 +223,24 @@ func (c *CDSParser) ParseDaily() (int, error) {
 		record.StateID, _ = object["stateId"].(string)
 		record.CountyID, _ = object["countyId"].(string)
 
-		record.Level, ok = object["level"].(string)
 		if ok && "" == record.Level {
 			switch c.Level {
 			case "country":
-				record.Level = "country"
+				if "" != record.Country && "" == record.State {
+					record.Level = "country"
+				}
 			case "state":
-				record.Level = "state"
+				if "" != record.State && "" == record.County {
+					record.Level = "state"
+				}
 			case "county":
-				record.Level = "county"
+				if "" != record.County && "" == record.City {
+					record.Level = "county"
+				}
 			case "city":
 				record.Level = "city"
+			default:
+				continue
 			}
 		}
 
