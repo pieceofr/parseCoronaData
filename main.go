@@ -20,7 +20,7 @@ const (
 
 func main() {
 	//go PrintUsage()
-	job := "online"
+	job := "history"
 	client, err := NewMongoConnect()
 	if err != nil {
 		fmt.Println("connect to autonomy db error:", err)
@@ -33,8 +33,8 @@ func main() {
 			fmt.Println(err.Error())
 			return
 		}
-		// no earlier than 2020-04-01 1585699200
-		CDSHistoryToDB(client, file, 1585699200)
+		// no earlier than 2020-04-15 1586908800
+		CDSHistoryToDB(client, file, 1586908800)
 	case "daily":
 		file, _ := getDataFilePath(CDSDaily)
 		log.Println("filepath=", file)
@@ -49,7 +49,6 @@ func main() {
 		}
 
 	}
-
 }
 
 func getDataFilePath(source CovidSource) (string, error) {
