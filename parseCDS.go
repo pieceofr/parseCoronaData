@@ -97,7 +97,7 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 				}
 				record.CountryID, _ = m["countryId"].(string)
 				record.StateID, _ = m["stateId"].(string)
-				record.CountryID, _ = m["countyId"].(string)
+				record.CountyID, _ = m["countyId"].(string)
 
 				record.Level, ok = m["level"].(string)
 				if ok && "" == record.Level {
