@@ -30,14 +30,25 @@ Usage of ./parseCoronaData:
 ### Examples
 + Parse JSON(Location)
 
-```./parseCoronaData -country "United States" -job history ```
+```
+./parseCoronaData  -job history -country "United States" 
 
-```./parseCoronaData -country "Taiwan" -job history ```
+./parseCoronaData -job history  -country "Taiwan"
 
-```./parseCoronaData -country "Iceland" -job history ```
+./parseCoronaData  -job history -country "Iceland"
 
+```
 
++ Parse Daily online
 
+```
+./parseCoronaData  -job online -country "United States" 
+
+./parseCoronaData -job online  -country "Taiwan"
+
+./parseCoronaData  -job online -country "Iceland"
+
+```
 
 
 
