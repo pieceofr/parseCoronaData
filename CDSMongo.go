@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"github.com/bitmark-inc/autonomy-api/schema"
 	"github.com/spf13/viper"
 )
 
@@ -66,7 +67,7 @@ func setIndex(c *MongoClient, collection string) error {
 	return nil
 }
 
-func createCDSData(c *MongoClient, result []CDSData, collection string) error {
+func createCDSData(c *MongoClient, result []schema.CDSData, collection string) error {
 	data := make([]interface{}, len(result))
 	for i, v := range result {
 		data[i] = v
@@ -88,5 +89,40 @@ func createCDSData(c *MongoClient, result []CDSData, collection string) error {
 		fmt.Println("no record inserted in db")
 	}
 
+	return nil
+}
+
+func ReplaceCDS(c *MongoClient, result []schema.CDSData, collection string) error {
+	for _, v := range result {
+		filter := bson.M{"name": v.Name, "report_ts": v.ReportTime}
+		replacement := bson.M{
+			"name":        v.Name,
+			"city":        v.City,
+			"county":      v.County,
+			"state":       v.State,
+			"country":     v.Country,
+			"level":       v.Level,
+			"cases":       v.Cases,
+			"deaths":      v.Deaths,
+			"recovered":   v.Recovered,
+			"report_ts":   v.ReportTime,
+			"update_ts":   v.UpdateTime,
+			"report_date": v.ReportTimeDate,
+			"countryId":   v.CountryID,
+			"stateId":     v.StateID,
+			"countyId":    v.CountyID,
+			"location":    v.Location,
+			"tz":          v.Timezone,
+		}
+		opts := options.Replace().SetUpsert(true)
+		_, err := c.UsedDB.Collection(collection).ReplaceOne(context.Background(), filter, replacement, opts)
+		if err != nil {
+			if errs, hasErr := err.(mongo.BulkWriteException); hasErr {
+				if 1 == len(errs.WriteErrors) && DuplicateKeyCode == errs.WriteErrors[0].Code {
+					fmt.Println("cds update with error: %s", err)
+				}
+			}
+		}
+	}
 	return nil
 }

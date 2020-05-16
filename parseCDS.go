@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/bitmark-inc/autonomy-api/schema"
 )
 
 type CovidSource string
@@ -33,9 +35,10 @@ type CDSParser struct {
 	CDSDataType CovidSource
 	DataFile    *os.File
 	URL         string
-	Result      []CDSData
+	Result      []schema.CDSData
 }
 
+/*
 type CDSData struct {
 	Name           string   `json:"name" bson:"name"`
 	City           string   `json:"city" bson:"city"`
@@ -55,11 +58,7 @@ type CDSData struct {
 	Location       GeoJSON  `json:"location" bson:"location"`
 	Timezone       []string `json:"tz" bson:"tz"`
 }
-
-type GeoJSON struct {
-	Type        string    `bson:"type"`
-	Coordinates []float64 `bson:"coordinates"`
-}
+*/
 
 func NewCDSParser(source CovidSource, country string, level string, input *os.File, url string) CDSParser {
 	return CDSParser{Country: country, Level: level, CDSDataType: source, DataFile: input, URL: url}
@@ -73,7 +72,7 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 	if err := dec.Decode(&sourceData); err != nil {
 		return 0, 0, err
 	}
-	records := []CDSData{}
+	records := []schema.CDSData{}
 	for key, value := range sourceData {
 		m := value.(map[string]interface{})
 		if strings.Contains(key, c.Country) {
@@ -81,12 +80,13 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 			dateData := m["dates"].(map[string]interface{})
 			//fmt.Println("number date objects:", len(dateData))
 			for k, v := range dateData {
-				record := CDSData{}
+				record := schema.CDSData{}
 				ok := false
 				record.Name, ok = m["name"].(string)
 				if !ok || len(record.Name) <= 0 {
 					continue
 				}
+				record.Country, _ = m["country"].(string)
 				record.City, _ = m["city"].(string)
 				record.County, _ = m["county"].(string)
 				record.State, _ = m["state"].(string)
@@ -131,9 +131,9 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 					for _, coorV := range coorRaw {
 						coortemp = append(coortemp, coorV.(float64))
 					}
-					record.Location = GeoJSON{Type: "Point", Coordinates: coortemp}
+					record.Location = schema.GeoJSON{Type: "Point", Coordinates: coortemp}
 				} else {
-					record.Location = GeoJSON{Type: "Point", Coordinates: []float64{}}
+					record.Location = schema.GeoJSON{Type: "Point", Coordinates: []float64{}}
 				}
 
 				tzRaw, ok := m["tz"].([]interface{})
@@ -202,14 +202,14 @@ func convertLocalDateToUTC(tz string, date string) (int64, error) {
 func (c *CDSParser) ParseDaily() (int, error) {
 	dec := json.NewDecoder(c.DataFile)
 	count := 0
-	updateRecords := []CDSData{}
+	updateRecords := []schema.CDSData{}
 
 	sourceData := make([]interface{}, 0)
 	if err := dec.Decode(&sourceData); err != nil {
 		return 0, err
 	}
 	for _, value := range sourceData {
-		record := CDSData{}
+		record := schema.CDSData{}
 		object := value.(map[string]interface{})
 		name, ok := object["name"].(string)
 		if ok && len(name) > 0 && strings.Contains(name, c.Country) { // Country
@@ -218,6 +218,7 @@ func (c *CDSParser) ParseDaily() (int, error) {
 			continue
 		}
 		record.City, _ = object["city"].(string)
+		record.Country, _ = object["country"].(string)
 		record.County, _ = object["county"].(string)
 		record.State, _ = object["state"].(string)
 		record.CountryID, _ = object["countryId"].(string)
@@ -255,9 +256,9 @@ func (c *CDSParser) ParseDaily() (int, error) {
 			for _, coorV := range coorRaw {
 				coortemp = append(coortemp, coorV.(float64))
 			}
-			record.Location = GeoJSON{Type: "Point", Coordinates: coortemp}
+			record.Location = schema.GeoJSON{Type: "Point", Coordinates: coortemp}
 		} else {
-			record.Location = GeoJSON{Type: "Point", Coordinates: []float64{}}
+			record.Location = schema.GeoJSON{Type: "Point", Coordinates: []float64{}}
 		}
 
 		tzRaw, ok := object["tz"].([]interface{})
@@ -305,7 +306,7 @@ func (c *CDSParser) ParseDailyOnline() (int, error) {
 	}
 	defer resp.Body.Close()
 	count := 0
-	updateRecords := []CDSData{}
+	updateRecords := []schema.CDSData{}
 	sourceData := make([]interface{}, 0)
 	data, err := ioutil.ReadAll(resp.Body)
 	err = json.Unmarshal(data, &sourceData)
@@ -315,7 +316,7 @@ func (c *CDSParser) ParseDailyOnline() (int, error) {
 	}
 
 	for _, value := range sourceData {
-		record := CDSData{}
+		record := schema.CDSData{}
 		object := value.(map[string]interface{})
 		name, ok := object["name"].(string)
 		if ok && len(name) > 0 && strings.Contains(name, c.Country) { // Country
@@ -324,6 +325,7 @@ func (c *CDSParser) ParseDailyOnline() (int, error) {
 			continue
 		}
 		record.City, _ = object["city"].(string)
+		record.Country, _ = object["country"].(string)
 		record.County, _ = object["county"].(string)
 		record.State, _ = object["state"].(string)
 		record.CountryID, _ = object["countryId"].(string)
@@ -356,9 +358,9 @@ func (c *CDSParser) ParseDailyOnline() (int, error) {
 			for _, coorV := range coorRaw {
 				coortemp = append(coortemp, coorV.(float64))
 			}
-			record.Location = GeoJSON{Type: "Point", Coordinates: coortemp}
+			record.Location = schema.GeoJSON{Type: "Point", Coordinates: coortemp}
 		} else {
-			record.Location = GeoJSON{Type: "Point", Coordinates: []float64{}}
+			record.Location = schema.GeoJSON{Type: "Point", Coordinates: []float64{}}
 		}
 
 		tzRaw, ok := object["tz"].([]interface{})
