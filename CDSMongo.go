@@ -9,7 +9,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/bitmark-inc/autonomy-api/schema"
 	"github.com/spf13/viper"
 )
 
@@ -67,7 +66,7 @@ func setIndex(c *MongoClient, collection string) error {
 	return nil
 }
 
-func createCDSData(c *MongoClient, result []schema.CDSData, collection string) error {
+func createCDSData(c *MongoClient, result []CDSData, collection string) error {
 	data := make([]interface{}, len(result))
 	for i, v := range result {
 		data[i] = v
@@ -92,7 +91,7 @@ func createCDSData(c *MongoClient, result []schema.CDSData, collection string) e
 	return nil
 }
 
-func ReplaceCDS(c *MongoClient, result []schema.CDSData, collection string) error {
+func ReplaceCDS(c *MongoClient, result []CDSData, collection string) error {
 	for _, v := range result {
 		filter := bson.M{"name": v.Name, "report_ts": v.ReportTime}
 		replacement := bson.M{
