@@ -48,6 +48,7 @@ type CDSData struct {
 	Cases          float64        `json:"cases" bson:"cases"`
 	Deaths         float64        `json:"deaths" bson:"deaths"`
 	Recovered      float64        `json:"recovered" bson:"recovered"`
+	Active         float64        `json:"active" bson:"active"`
 	ReportTime     int64          `json:"report_ts" bson:"report_ts"`
 	UpdateTime     int64          `json:"update_ts" bson:"update_ts"`
 	ReportTimeDate string         `json:"report_date" bson:"report_date"`
@@ -155,7 +156,17 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 					continue
 				}
 				record.Deaths, _ = dateCases["deaths"].(float64)
-				record.Recovered, _ = dateCases["Recovered"].(float64)
+				if record.Deaths < 0 {
+					record.Deaths = 0
+				}
+				record.Recovered, _ = dateCases["recovered"].(float64)
+				if record.Recovered < 0 {
+					record.Recovered = 0
+				}
+				record.Active, _ = dateCases["active"].(float64)
+				if record.Active <= 0 {
+					record.Active = record.Cases - record.Deaths - record.Recovered
+				}
 
 				convertZone := "UTC"
 				if len(record.Timezone) > 0 {
