@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"time"
 
 	"github.com/bitmark-inc/autonomy-api/schema"
 )
@@ -46,8 +47,9 @@ func main() {
 			fmt.Println(err.Error())
 			return
 		}
-		// no earlier than 2020-04-15 1586908800
-		CDSHistoryToDB(client, file, country, 1586908800)
+		// 20 days before
+		b20day := time.Now().UTC().Unix() - 60*60*24*20
+		CDSHistoryToDB(client, file, country, b20day)
 	case "daily":
 		file, _ := getDataFilePath(CDSDaily)
 		log.Println("filepath=", file)
