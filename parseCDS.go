@@ -168,16 +168,13 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 					record.Active = record.Cases - record.Deaths - record.Recovered
 				}
 
-				convertZone := "UTC"
-				if len(record.Timezone) > 0 {
-					convertZone = record.Timezone[0]
-				}
-				ts, err := convertLocalDateToUTC(convertZone, k)
+				dateBeginUTCTime, err := convertDateToUTCTime(k)
 				if err != nil {
-					fmt.Println(record.Name, "  convertLocalDateToUTC error:", err)
+					fmt.Println("Convert date string to UTC time error:", err)
 					continue
 				}
-				record.ReportTime = ts
+
+				record.ReportTime = dateBeginUTCTime
 				record.UpdateTime = time.Now().UTC().Unix()
 				record.ReportTimeDate = k
 				if record.ReportTime >= noEarlier {
@@ -189,6 +186,14 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 	}
 	c.Result = records
 	return count, rawRecordCount, nil
+}
+
+func convertDateToUTCTime(date string) (int64, error) {
+	t, parseErr := time.Parse(layoutISO, date)
+	if parseErr != nil {
+		return 0, parseErr
+	}
+	return t.Unix(), nil
 }
 
 func convertLocalDateToUTC(tz string, date string) (int64, error) {
@@ -286,17 +291,20 @@ func (c *CDSParser) ParseDaily() (int, error) {
 			continue
 		}
 		record.Deaths, _ = object["deaths"].(float64)
-		record.Recovered, _ = object["Recovered"].(float64)
+		if record.Deaths < 0 {
+			record.Deaths = 0
+		}
+		record.Recovered, _ = object["recovered"].(float64)
+		if record.Recovered < 0 {
+			record.Recovered = 0
+		}
+		record.Active, _ = object["active"].(float64)
+		if record.Active <= 0 {
+			record.Active = record.Cases - record.Deaths - record.Recovered
+		}
 
 		year, month, day := time.Now().Date()
-		dateString := fmt.Sprintf("%s-%.2s-%.2s", year, int(month), day)
-		if len(record.Timezone) > 0 {
-			location, err := time.LoadLocation(record.Timezone[0])
-			if err == nil {
-				year, month, day := time.Now().In(location).Date()
-				dateString = fmt.Sprintf("%d-%.2d-%.2d", year, int(month), day)
-			}
-		}
+		dateString := fmt.Sprintf("%d-%.2d-%.2d", year, int(month), day)
 		record.UpdateTime = time.Now().UTC().Unix()
 		record.ReportTime = time.Date(year, month, day, 0, 0, 0, 0, time.UTC).Unix()
 		record.ReportTimeDate = dateString //In local time
@@ -388,16 +396,20 @@ func (c *CDSParser) ParseDailyOnline() (int, error) {
 			continue
 		}
 		record.Deaths, _ = object["deaths"].(float64)
-		record.Recovered, _ = object["Recovered"].(float64)
-		year, month, day := time.Now().Date()
-		dateString := fmt.Sprintf("%s-%.2s-%.2s", year, int(month), day)
-		if len(record.Timezone) > 0 {
-			location, err := time.LoadLocation(record.Timezone[0])
-			if err == nil {
-				year, month, day := time.Now().In(location).Date()
-				dateString = fmt.Sprintf("%d-%.2d-%.2d", year, int(month), day)
-			}
+		if record.Deaths < 0 {
+			record.Deaths = 0
 		}
+		record.Recovered, _ = object["recovered"].(float64)
+		if record.Recovered < 0 {
+			record.Recovered = 0
+		}
+		record.Active, _ = object["active"].(float64)
+		if record.Active <= 0 {
+			record.Active = record.Cases - record.Deaths - record.Recovered
+		}
+
+		year, month, day := time.Now().Date()
+		dateString := fmt.Sprintf("%d-%.2d-%.2d", year, int(month), day)
 		record.UpdateTime = time.Now().UTC().Unix()
 		record.ReportTime = time.Date(year, month, day, 0, 0, 0, 0, time.UTC).Unix()
 		record.ReportTimeDate = dateString //In local time
