@@ -21,6 +21,7 @@ const (
 	CollectionConfirmIceland = "ConfirmIceland"
 	DuplicateKeyCode         = 11000
 	coronaDataScraperURL     = "https://coronadatascraper.com/data.json"
+	keepDaysInHistory        = 30
 )
 
 var job string
@@ -47,9 +48,8 @@ func main() {
 			fmt.Println(err.Error())
 			return
 		}
-		// 20 days before
-		b20day := time.Now().UTC().Unix() - 60*60*24*20
-		CDSHistoryToDB(client, file, country, b20day)
+		keepDays := time.Now().UTC().Unix() - 60*60*24*keepDaysInHistory
+		CDSHistoryToDB(client, file, country, keepDays)
 	case "daily":
 		file, _ := getDataFilePath(CDSDaily)
 		log.Println("filepath=", file)
