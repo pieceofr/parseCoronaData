@@ -190,10 +190,14 @@ func ContinuousDataCDSConfirm(c *MongoClient, loc PoliticalGeo, windowSize int64
 	case CdsUSA:
 		col = c.UsedDB.Collection(CDSCountyCollectionMatrix[CDSCountryType(CdsUSA)])
 		opts = options.Find().SetSort(bson.M{"report_ts": -1}).SetLimit(windowSize + 1)
+		if "" == loc.State || "" == loc.County {
+			return nil, ErrNoConfirmDataset
+		}
 		filter = bson.M{"county": loc.County, "state": loc.State}
 		if timeBefore > 0 {
 			filter = bson.M{"county": loc.County, "state": loc.State, "report_ts": bson.D{{"$lte", timeBefore}}}
 		}
+
 	default:
 		return nil, ErrNoConfirmDataset
 	}
@@ -213,7 +217,7 @@ func ContinuousDataCDSConfirm(c *MongoClient, loc PoliticalGeo, windowSize int64
 		}
 		if len(now.Name) > 0 { // now data is valid
 			head := make([]CDSScoreDataSet, 1)
-			head[0] = CDSScoreDataSet{Name: now.Name, Cases: now.Cases - result.Cases, ReportTime: result.ReportTime, ReportDate: result.ReportDate}
+			head[0] = CDSScoreDataSet{Name: now.Name, Cases: now.Cases - result.Cases, ReportTime: now.ReportTime, ReportDate: now.ReportDate}
 			results = append(head, results...)
 		}
 		now = result

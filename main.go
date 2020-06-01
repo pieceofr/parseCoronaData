@@ -23,16 +23,20 @@ const (
 	CollectionConfirmIceland    = "ConfirmIceland"
 	DuplicateKeyCode            = 11000
 	coronaDataScraperDailyURL   = "https://coronadatascraper.com/data.json"
-	coronaDataScraperHistoryURL = "https://coronadatascraper.com/timeseries.json"
+	coronaDataScraperHistoryURL = "https://coronadatascraper.com/timeseries-byLocation.json"
 	keepDaysInHistory           = 30
 )
 
 var job string
 var country string
+var state string  // for analysis
+var county string // for analysis
 
 func init() {
 	flag.StringVar(&job, "job", "history", "select from history/daily/online")
 	flag.StringVar(&country, "country", "country", "ie. United States / Taiwan / Iceland")
+	flag.StringVar(&state, "state", "California", "If you are using United State Data, you need to specify State. ie. California")
+	flag.StringVar(&county, "county", "Santa Clara County", "If you are using United State Data, you need to specify County. ie. Santa Clara County")
 }
 
 func main() {
@@ -77,7 +81,7 @@ func main() {
 		}
 		CDSHistoryToDB(client, file, country, 0)
 	case "analysis":
-		loc := PoliticalGeo{Country: schema.CdsTaiwan}
+		loc := PoliticalGeo{Country: country, State: state, County: county}
 		ExponientialScoreOfAllTime(client, loc)
 
 	}

@@ -31,6 +31,7 @@ Usage of ./parseCoronaData:
 + Download Location based History Data
 ```
 ./parseCoronaData  -job historyDownload
+
 ```
 
 + Save All history to
@@ -63,6 +64,11 @@ Usage of ./parseCoronaData:
 ./parseCoronaData  -job dailyOnline -country "Iceland"
 
 ```
++ Save  Analysis Data Point to CVS
+```
+./parseCoronaData -job analysis  -country "Taiwan"
+./parseCoronaData -job analysis  -country "Iceland"
 
+```
 
 

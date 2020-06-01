@@ -75,7 +75,6 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 	records := []CDSData{}
 	for key, value := range sourceData {
 		m := value.(map[string]interface{})
-		fmt.Println("key in data", key)
 		if strings.Contains(key, c.Country) {
 			rawRecordCount++
 			dateData := m["dates"].(map[string]interface{})
@@ -187,7 +186,6 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 				if record.ReportTime >= noEarlier {
 					records = append(records, record)
 					count++
-					fmt.Println("Record number:", count)
 				}
 			} // end of parsing date objects
 		}
