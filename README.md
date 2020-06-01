@@ -28,6 +28,20 @@ Usage of ./parseCoronaData:
         select from history/daily/online (default "history")
 ```
 ### Examples
++ Download Location based History Data
+```
+./parseCoronaData  -job historyDownload
+```
+
++ Save All history to
+```
+./parseCoronaData  -job historyAll -country "United States" 
+
+./parseCoronaData -job historyAll  -country "Taiwan"
+
+./parseCoronaData  -job historyAll -country "Iceland"
+
+```
 + Parse JSON(Location)
 
 ```
@@ -42,11 +56,11 @@ Usage of ./parseCoronaData:
 + Parse Daily online
 
 ```
-./parseCoronaData  -job online -country "United States" 
+./parseCoronaData  -job dailyOnline -country "United States" 
 
-./parseCoronaData -job online  -country "Taiwan"
+./parseCoronaData -job dailyOnline  -country "Taiwan"
 
-./parseCoronaData  -job online -country "Iceland"
+./parseCoronaData  -job dailyOnline -country "Iceland"
 
 ```
 

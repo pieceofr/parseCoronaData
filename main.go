@@ -4,7 +4,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"path"
 	"time"
@@ -15,13 +17,14 @@ import (
 var USAData []schema.CDSData
 
 const (
-	DataDir                  = "data"
-	CollectionConfirmUS      = "ConfirmUS"
-	CollectionConfirmTaiwan  = "ConfirmTaiwan"
-	CollectionConfirmIceland = "ConfirmIceland"
-	DuplicateKeyCode         = 11000
-	coronaDataScraperURL     = "https://coronadatascraper.com/data.json"
-	keepDaysInHistory        = 30
+	DataDir                     = "data"
+	CollectionConfirmUS         = "ConfirmUS"
+	CollectionConfirmTaiwan     = "ConfirmTaiwan"
+	CollectionConfirmIceland    = "ConfirmIceland"
+	DuplicateKeyCode            = 11000
+	coronaDataScraperDailyURL   = "https://coronadatascraper.com/data.json"
+	coronaDataScraperHistoryURL = "https://coronadatascraper.com/timeseries.json"
+	keepDaysInHistory           = 30
 )
 
 var job string
@@ -42,7 +45,10 @@ func main() {
 		return
 	}
 	switch job {
+	case "historyDownload":
+		CDSDownloadHistory(coronaDataScraperHistoryURL)
 	case "history":
+		CDSDownloadHistory(coronaDataScraperHistoryURL)
 		file, err := getDataFilePath(CDSTimeseriesLocationFile)
 		if err != nil {
 			fmt.Println(err.Error())
@@ -57,11 +63,22 @@ func main() {
 		if err != nil {
 			fmt.Println("parse daily err", err)
 		}
-	case "online":
-		err := CDSDailyOnline(client, coronaDataScraperURL, country)
+	case "dailyOnline":
+		err := CDSDailyOnline(client, coronaDataScraperDailyURL, country)
 		if err != nil {
 			fmt.Println("parse daily online err", err)
 		}
+	case "historyAll":
+		CDSDownloadHistory(coronaDataScraperHistoryURL)
+		file, err := getDataFilePath(CDSTimeseriesLocationFile)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		CDSHistoryToDB(client, file, country, 0)
+	case "analysis":
+		loc := PoliticalGeo{Country: schema.CdsTaiwan}
+		ExponientialScoreOfAllTime(client, loc)
 
 	}
 }
@@ -82,6 +99,29 @@ func getDataFilePath(source CovidSource) (string, error) {
 		return "", errors.New("no data source")
 	}
 	return "", nil
+}
+
+func CDSDownloadHistory(url string) error {
+	// Get the data
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	file, err := getDataFilePath(CDSTimeseriesLocationFile)
+	if err != nil {
+		return err
+	}
+	// Create the file
+	out, err := os.Create(file)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	// Write the body to file
+	_, err = io.Copy(out, resp.Body)
+	return err
 }
 
 func CDSHistoryToDB(client *MongoClient, cdsFile string, country string, noEarlier int64) {

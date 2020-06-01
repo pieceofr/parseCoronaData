@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -16,6 +17,43 @@ const (
 	default_mongo_conn        = "mongodb://localhost:27017"
 	default_mongo_autonomy_db = "autonomy"
 )
+const (
+	CdsUSA     = "United States"
+	CdsTaiwan  = "Taiwan"
+	CdsIceland = "Iceland"
+)
+
+type CDSCountryType string
+
+var CDSCountyCollectionMatrix = map[CDSCountryType]string{
+	CDSCountryType(CdsUSA):     "ConfirmUS",
+	CDSCountryType(CdsTaiwan):  "ConfirmTaiwan",
+	CDSCountryType(CdsIceland): "ConfirmIceland",
+}
+
+var defaulMognoTimeout = 5 * time.Second
+
+var (
+	ErrNoConfirmDataset       = fmt.Errorf("no data-set")
+	ErrInvalidConfirmDataset  = fmt.Errorf("invalid confirm data-set")
+	ErrPoliticalTypeGeoInfo   = fmt.Errorf("no political type geo info")
+	ErrConfirmDataFetch       = fmt.Errorf("fetch cds confirm data fail")
+	ErrConfirmDecode          = fmt.Errorf("decode confirm data fail")
+	ErrConfirmDuplicateRecord = fmt.Errorf("confirm data duplicate")
+)
+
+type CDSScoreDataSet struct {
+	Name       string  `json:"name" bson:"name"`
+	ReportTime int64   `json:"report_ts" bson:"report_ts"`
+	ReportDate string  `json:"report_date" bson:"report_date"`
+	Cases      float64 `json:"cases" bson:"cases"`
+}
+
+type PoliticalGeo struct {
+	Country string
+	State   string
+	County  string
+}
 
 func init() {
 	viper.AutomaticEnv()
@@ -124,4 +162,66 @@ func ReplaceCDS(c *MongoClient, result []CDSData, collection string) error {
 		}
 	}
 	return nil
+}
+
+//
+func ContinuousDataCDSConfirm(c *MongoClient, loc PoliticalGeo, windowSize int64, timeBefore int64) ([]CDSScoreDataSet, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), defaulMognoTimeout)
+	defer cancel()
+
+	var col *mongo.Collection
+	var filter bson.M
+	var opts *options.FindOptions
+	switch loc.Country { //  Currently this function support only USA data
+	case CdsTaiwan:
+		col = c.UsedDB.Collection(CDSCountyCollectionMatrix[CDSCountryType(CdsTaiwan)])
+		opts = options.Find().SetSort(bson.M{"report_ts": -1}).SetLimit(windowSize + 1)
+		filter = bson.M{}
+		if timeBefore > 0 {
+			filter = bson.M{"report_ts": bson.D{{"$lte", timeBefore}}}
+		}
+	case CdsIceland:
+		col = c.UsedDB.Collection(CDSCountyCollectionMatrix[CDSCountryType(CdsIceland)])
+		opts = options.Find().SetSort(bson.M{"report_ts": -1}).SetLimit(windowSize + 1)
+		filter = bson.M{}
+		if timeBefore > 0 {
+			filter = bson.M{"report_ts": bson.D{{"$lte", timeBefore}}}
+		}
+	case CdsUSA:
+		col = c.UsedDB.Collection(CDSCountyCollectionMatrix[CDSCountryType(CdsUSA)])
+		opts = options.Find().SetSort(bson.M{"report_ts": -1}).SetLimit(windowSize + 1)
+		filter = bson.M{"county": loc.County, "state": loc.State}
+		if timeBefore > 0 {
+			filter = bson.M{"county": loc.County, "state": loc.State, "report_ts": bson.D{{"$lte", timeBefore}}}
+		}
+	default:
+		return nil, ErrNoConfirmDataset
+	}
+
+	var results []CDSScoreDataSet
+	cur, err := col.Find(context.Background(), filter, opts)
+	if nil != err {
+		return nil, ErrConfirmDataFetch
+	}
+
+	now := CDSScoreDataSet{}
+
+	for cur.Next(ctx) {
+		var result CDSScoreDataSet
+		if errDecode := cur.Decode(&result); errDecode != nil {
+			return nil, errDecode
+		}
+		if len(now.Name) > 0 { // now data is valid
+			head := make([]CDSScoreDataSet, 1)
+			head[0] = CDSScoreDataSet{Name: now.Name, Cases: now.Cases - result.Cases, ReportTime: result.ReportTime, ReportDate: result.ReportDate}
+			results = append(head, results...)
+		}
+		now = result
+	}
+	if len(results) == 0 && now.Name != "" { // only one record
+		results = append(results, now)
+	}
+
+	cur.Close(ctx)
+	return results, nil
 }
