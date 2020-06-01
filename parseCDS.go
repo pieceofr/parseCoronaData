@@ -69,11 +69,13 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 	rawRecordCount := 0
 	sourceData := make(map[string]interface{})
 	if err := dec.Decode(&sourceData); err != nil {
+		fmt.Println("Decode error :", err)
 		return 0, 0, err
 	}
 	records := []CDSData{}
 	for key, value := range sourceData {
 		m := value.(map[string]interface{})
+		fmt.Println("key in data", key)
 		if strings.Contains(key, c.Country) {
 			rawRecordCount++
 			dateData := m["dates"].(map[string]interface{})
@@ -83,6 +85,7 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 				ok := false
 				record.Name, ok = m["name"].(string)
 				if !ok || len(record.Name) <= 0 {
+					fmt.Println("SKIP : Invalid name: ", record.Name)
 					continue
 				}
 				record.Country, _ = m["country"].(string)
@@ -92,6 +95,7 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 
 				record.Country, ok = m["country"].(string)
 				if !ok || len(record.Country) <= 0 {
+					fmt.Println("SKIP : Invalid country: ", record.Country)
 					continue
 				}
 				record.CountryID, _ = m["countryId"].(string)
@@ -116,11 +120,13 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 					case "city":
 						record.Level = "city"
 					default:
+						fmt.Println("SKIP : Invalid level: ", record.Level)
 						continue
 					}
 				}
 
 				if record.Level != c.Level {
+					fmt.Println("SKIP : Mismatch level: ", record.Level, "/", c.Level)
 					continue
 				}
 
@@ -153,6 +159,7 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 				}
 				record.Cases, ok = dateCases["cases"].(float64)
 				if !ok {
+					fmt.Println("SKIP : Get cases fail")
 					continue
 				}
 				record.Deaths, _ = dateCases["deaths"].(float64)
@@ -170,7 +177,7 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 
 				dateBeginUTCTime, err := convertDateToUTCTime(k)
 				if err != nil {
-					fmt.Println("Convert date string to UTC time error:", err)
+					fmt.Println("SKIP :onvert date string to UTC time error:", err)
 					continue
 				}
 
@@ -180,11 +187,13 @@ func (c *CDSParser) ParseHistory(noEarlier int64) (int, int, error) {
 				if record.ReportTime >= noEarlier {
 					records = append(records, record)
 					count++
+					fmt.Println("Record number:", count)
 				}
 			} // end of parsing date objects
 		}
 	}
 	c.Result = records
+
 	return count, rawRecordCount, nil
 }
 
